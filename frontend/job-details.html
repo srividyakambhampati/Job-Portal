@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Portal - Job Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">
+                <i class="bi bi-briefcase-fill text-primary me-2"></i>JobPortal
+            </a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="auth-nav"></ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-5">
+        <div id="job-content" class="row justify-content-center">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply Modal -->
+    <div class="modal fade" id="applyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Apply for Job</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="apply-form">
+                        <div class="mb-3">
+                            <label for="resume" class="form-label">Upload Resume (PDF/DOC)</label>
+                            <input type="file" class="form-control" id="resume" accept=".pdf,.doc,.docx">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const jobId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!jobId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const job = await api.getJob(jobId);
+                const user = JSON.parse(localStorage.getItem('user'));
+
+                const jobContent = document.getElementById('job-content');
+
+                let applyButton = '';
+                if (user && user.role === 'candidate') {
+                    applyButton = `<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyModal">Apply Now</button>`;
+                } else if (!user) {
+                    applyButton = `<a href="login.html" class="btn btn-primary">Login to Apply</a>`;
+                }
+
+                jobContent.innerHTML = `
+                    <div class="col-md-9">
+                        <div class="card border-0 shadow-lg job-detail-card overflow-hidden">
+                            <div class="card-header bg-white border-0 p-5 pb-0">
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb mb-4">
+                                        <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none">Jobs</a></li>
+                                        <li class="breadcrumb-item active" aria-current="page">${job.title}</li>
+                                    </ol>
+                                </nav>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h1 class="display-6 fw-bold mb-2">${job.title}</h1>
+                                        <p class="text-primary fs-5 fw-semibold mb-0">${job.company}</p>
+                                    </div>
+                                    <div class="job-logo-lg bg-light rounded-3 p-4">
+                                        <i class="bi bi-building text-primary display-4"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-4 d-flex flex-wrap gap-3">
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="bi bi-geo-alt me-2 text-primary"></i> ${job.location}
+                                    </div>
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="bi bi-briefcase me-2 text-primary"></i> ${job.jobType}
+                                    </div>
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="bi bi-currency-dollar me-2 text-primary"></i> ${job.salary || 'Negotiable'}
+                                    </div>
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="bi bi-calendar-event me-2 text-primary"></i> Posted on ${new Date(job.createdAt).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-5">
+                                <hr class="my-4 opacity-10">
+                                <h4 class="fw-bold mb-4">About the Role</h4>
+                                <div class="description-text mb-5">
+                                    ${job.description.split('\n').map(p => `<p class="mb-3">${p}</p>`).join('')}
+                                </div>
+                                
+                                <div class="action-section glass p-4 rounded-4 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Interested in this position?</h5>
+                                        <p class="text-muted small mb-0">Apply today and take the next step in your career.</p>
+                                    </div>
+                                    <div>
+                                        ${applyButton}
+                                        <a href="index.html" class="btn btn-link text-decoration-none ms-3">Cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('job-content').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        });
+
+        document.getElementById('apply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const resumeInput = document.getElementById('resume');
+            const resumeFile = resumeInput.files[0];
+
+            // If no file, trigger file picker and show hint
+            if (!resumeFile) {
+                console.log('⚠️ No resume selected, triggering file picker');
+                showAlert('Please select your resume file first. Select the file and then click Submit again.', 'info');
+                resumeInput.click();
+                return;
+            }
+
+            console.log('📄 Resume selected:', resumeFile.name);
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            // Set Loading State
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Submitting...`;
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+
+            console.log('🚀 Submitting application for jobId:', jobId);
+
+            try {
+                const response = await api.applyJob(jobId, formData);
+                console.log('✅ Application Success Response:', response);
+
+                const modalElement = document.getElementById('applyModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                modal.hide();
+
+                // Small delay to allow modal to close before showing alert
+                setTimeout(() => {
+                    showAlert('Application submitted successfully! Check your email for confirmation.', 'success');
+                    console.log('🎊 Success alert triggered');
+                }, 500);
+
+                // Clear form
+                e.target.reset();
+            } catch (error) {
+                console.error('❌ Application Submission Error:', error);
+
+                // Detailed error for debugging
+                const errorMsg = error.message || 'Failed to submit application';
+                showAlert(errorMsg, 'danger');
+
+                // If it's a 401, maybe token expired?
+                if (error.message && error.message.toLowerCase().includes('token')) {
+                    console.warn('⚠️ Token might be expired, redirecting to login');
+                    setTimeout(() => window.location.href = 'login.html', 2000);
+                }
+            } finally {
+                // Restore Button
+                console.log('🔄 Restoring submit button state');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        });
+    </script>
+</body>
+
+</html>

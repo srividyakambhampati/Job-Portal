@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Portal - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">JobPortal</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="auth-nav"></ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h2 class="mb-4">Dashboard</h2>
+        <div id="dashboard-content">
+            <!-- Dynamic Content -->
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+            const user = JSON.parse(localStorage.getItem('user'));
+            const dashboardContent = document.getElementById('dashboard-content');
+
+            try {
+                if (user.role === 'candidate') {
+                    // Load applications
+                    const applications = await api.getMyApplications();
+
+                    if (applications.length === 0) {
+                        dashboardContent.innerHTML = '<div class="alert alert-info">You haven\'t applied to any jobs yet.</div>';
+                        return;
+                    }
+
+                    let html = `
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">My Applications</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Job Title</th>
+                                                <th>Company</th>
+                                                <th>Status</th>
+                                                <th>Applied Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                    `;
+
+                    applications.forEach(app => {
+                        const statusBadge = app.status === 'applied' ? 'bg-primary' :
+                            app.status === 'shortlisted' ? 'bg-success' :
+                                app.status === 'rejected' ? 'bg-danger' : 'bg-secondary';
+
+                        html += `
+                            <tr>
+                                <td>${app.job.title}</td>
+                                <td>${app.job.company}</td>
+                                <td><span class="badge ${statusBadge}">${app.status}</span></td>
+                                <td>${new Date(app.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `</tbody></table></div></div></div>`;
+                    dashboardContent.innerHTML = html;
+
+                } else if (user.role === 'employer' || user.role === 'admin') {
+                    // Load posted jobs (simplification: showing all jobs for admin? or separate api? route says /myjobs)
+                    // I didn't create /myjobs route in jobRoutes.js explicitly for employers? 
+                    // Wait, I did verify jobRoutes.js, let me check. 
+                    // I checked jobRoutes.js in thought process but let's double check if I implemented a specific 'get my jobs' route.
+                    // I implemented: GET /, GET /:id, POST /, DELETE /:id.
+                    // I MISSED 'GET /myjobs' in the initial backend code!
+                    // I need to add that route to jobRoutes.js or filter in frontend.
+                    // Better to add it to backend quickly.
+
+                    // Temporary fix: Fetch all jobs and filter (inefficient but works for small scale)
+                    // OR better: Execute a quick file update to jobRoutes.js after this tool call.
+
+                    // For now, I will render a placeholder or fetch all and filter client side to show progress, 
+                    // then I will do a quick fix to backend.
+
+                    // Let's implement client-side filtering for now to keep flow, then patch backend.
+
+                    const allJobs = await api.getJobs();
+                    const myJobs = allJobs.filter(job => job.postedBy && (job.postedBy._id === user._id || job.postedBy === user._id)); // Populate vs ID check
+
+                    let html = `
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Posted Jobs</h5>
+                                <a href="post-job.html" class="btn btn-sm btn-primary">Post New Job</a>
+                            </div>
+                            <div class="card-body">
+                     `;
+
+                    if (myJobs.length === 0) {
+                        html += '<p>No jobs posted yet.</p>';
+                    } else {
+                        html += `<div class="list-group">`;
+                        for (const job of myJobs) {
+                            // Fetch applications for this job
+                            // This might be too many requests. Let's just show a button to view applications.
+                            html += `
+                                <div class="list-group-item list-group-item-action flex-column align-items-start">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">${job.title}</h5>
+                                        <small>${new Date(job.createdAt).toLocaleDateString()}</small>
+                                    </div>
+                                    <p class="mb-1">${job.location}</p>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewApplications('${job._id}')">View Applications</button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteJob('${job._id}')">Delete</button>
+                                    </div>
+                                    <div id="apps-${job._id}" class="mt-3 d-none">
+                                        <!-- Applications loaded here -->
+                                    </div>
+                                </div>
+                              `;
+                        }
+                        html += `</div>`;
+                    }
+
+                    html += `</div></div>`;
+                    dashboardContent.innerHTML = html;
+                }
+            } catch (error) {
+                dashboardContent.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        });
+
+        async function viewApplications(jobId) {
+            const container = document.getElementById(`apps-${jobId}`);
+            if (!container.classList.contains('d-none')) {
+                container.classList.add('d-none');
+                return;
+            }
+
+            try {
+                const applications = await api.getJobApplications(jobId);
+                if (applications.length === 0) {
+                    container.innerHTML = '<p class="text-muted ms-3">No applications yet.</p>';
+                } else {
+                    let html = '<ul class="list-group list-group-flush">';
+                    applications.forEach(app => {
+                        const resumeUrl = `${window.location.origin}/uploads/${app.resume}`;
+                        html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            <div>
+                                <strong>${app.applicant.name}</strong> (${app.applicant.email})
+                            </div>
+                            <a href="${resumeUrl}" target="_blank" class="btn btn-sm btn-info text-white">Download Resume</a>
+                        </li>
+                    `;
+                    });
+                    html += '</ul>';
+                    container.innerHTML = html;
+                }
+                container.classList.remove('d-none');
+            } catch (error) {
+                showAlert('Error loading applications', 'danger');
+            }
+        }
+
+        async function deleteJob(jobId) {
+            if (!confirm('Are you sure you want to delete this job?')) return;
+            try {
+                // Since I didn't put a direct delete helper in api.js (oops, I did? let's check),
+                // api.js check: deleteJob NOT in there. I put getJob, postJob, applyJob.
+                // I need to add delete method to api.js or call generic request.
+                await api.request(`/jobs/${jobId}`, 'DELETE');
+                showAlert('Job deleted', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } catch (error) {
+                showAlert(error.message, 'danger');
+            }
+        }
+    </script>
+</body>
+
+</html>

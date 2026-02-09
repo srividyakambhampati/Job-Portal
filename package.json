@@ -1,0 +1,24 @@
+{
+  "name": "job_portal_website",
+  "version": "1.0.0",
+  "description": "A full-stack Job Portal application built with Node.js, Express, MongoDB, and vanilla HTML/CSS/JS (Bootstrap).",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "seed": "node backend/seed.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.5",
+    "multer": "^2.0.2"
+  }
+}
